@@ -1,0 +1,15 @@
+name: firms-harmonization-coverage
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - gdal
+  - libgdal-hdf4
+  - libgdal-hdf5
+  - hdf4
+  - hdf5
+  - rasterio
+  - earthaccess
+  - numpy
+  - pyproj
+  - shapely

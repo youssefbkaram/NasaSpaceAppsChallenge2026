@@ -1,0 +1,23 @@
+[Unit]
+Description=NASA FIRMS Parquet/DuckDB data API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=firms
+Group=firms
+WorkingDirectory=/opt/firms-site
+EnvironmentFile=/opt/firms-site/config/firms-api.env
+ExecStart=/opt/firms-site/.venv/bin/python -m firms_harmonization.web_api
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/firms-api
+ReadOnlyPaths=/opt/firms-site/data/web-parquet
+
+[Install]
+WantedBy=multi-user.target

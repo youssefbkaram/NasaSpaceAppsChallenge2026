@@ -1,0 +1,18 @@
+{
+  "input_dir": "../data",
+  "output_dir": "../data/processed/run-example",
+  "chunk_size": 100000,
+  "grid_resolutions_m": [1000, 5000, 10000],
+  "primary_grid_resolution_m": 5000,
+  "match_distance_thresholds_m": [1000, 5000, 10000],
+  "match_time_thresholds_minutes": [30, 60, 180],
+  "model_reference": "shared_relative_index",
+  "random_seed": 53121,
+  "country_boundaries": null,
+  "countries": null,
+  "include_nrt": true,
+  "strict": false,
+  "matching_enabled": true,
+  "model_enabled": true,
+  "extras": {}
+}
