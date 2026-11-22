@@ -102,10 +102,11 @@ hf upload YOUR_HF_USERNAME/firms-data data\web-parquet . --repo-type dataset
 ```
 
 The Pages workflow is configured with the public dataset URL, so no Actions
-secret or variable is needed. Enable GitHub Pages with **GitHub Actions** as its
-source, then push to `main` or run the `Deploy static explorer` workflow
-manually. The workflow builds the frontend only; the large Parquet files stay
-in the Hugging Face repository. For local builds, set
+secret or variable is needed. For first-time setup, open the repository's
+**Settings → Pages → Build and deployment** and set **Source** to **GitHub
+Actions**. After that, pushes to `main` or `master` run the `Deploy static
+explorer` workflow automatically. The workflow builds the frontend only; the
+large Parquet files stay in the Hugging Face repository. For local builds, set
 `VITE_FIRMS_PARQUET_BASE_URL` to the same public URL in `frontend/.env.local`.
 It is a public data URL, not a secret.
 
