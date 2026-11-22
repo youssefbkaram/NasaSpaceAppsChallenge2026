@@ -8,6 +8,7 @@
 
 # Local data archives are large and must be obtained separately
 /data/
+/Raw Data/
 
 # Python virtual environments, caches, and build artifacts
 .venv/

@@ -19,6 +19,10 @@ import {
   X
 } from 'lucide-react';
 import type { HotspotObservation, RegionPreset, SensorType } from '../../types/fire';
+import {
+  FIRMS_DATA_END_DATE,
+  FIRMS_DATA_START_DATE
+} from '../../data/firmsDataAvailability';
 import { ALL_COUNTRIES_REGION, LOCAL_COUNTRY_DATASETS } from '../../data/localCountryData';
 import { REGION_PRESETS } from '../../data/regionPresets';
 import { FIRMS_DATA_MODE, fetchNASAObservations } from '../../services/firmsDataService';
@@ -30,8 +34,6 @@ type ViewMode = 'map' | 'ai';
 type PeriodMode = '24h' | '3d' | '7d' | 'custom';
 type BasemapMode = 'dark' | 'satellite';
 
-const EARLIEST_DATE = '2000-11-01';
-const TODAY = new Date().toISOString().slice(0, 10);
 const EMPTY_OBSERVATIONS: HotspotObservation[] = [];
 
 function shiftDate(value: string, offset: number): string {
@@ -196,11 +198,7 @@ export function FireExplorer({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sensor, setSensor] = useState<SensorType>('ALL_RAW');
   const [period, setPeriod] = useState<PeriodMode>('24h');
-  const [endDate, setEndDate] = useState(() => {
-    const date = new Date();
-    if (FIRMS_DATA_MODE === 'local') date.setUTCDate(date.getUTCDate() - 1);
-    return date.toISOString().slice(0, 10);
-  });
+  const [endDate, setEndDate] = useState(FIRMS_DATA_END_DATE);
   const [customStart, setCustomStart] = useState(endDate);
   const [customEnd, setCustomEnd] = useState(endDate);
   const [frpMinimum, setFrpMinimum] = useState('');
@@ -224,15 +222,18 @@ export function FireExplorer({
   const startDate = observationStart(endDate, period, customStart);
   const actualEndDate = period === 'custom' ? customEnd : endDate;
   const days = countDays(startDate, actualEndDate);
-  const validRange = startDate >= EARLIEST_DATE && actualEndDate <= TODAY && days >= 1 && days <= 7;
+  const validRange = startDate >= FIRMS_DATA_START_DATE &&
+    actualEndDate <= FIRMS_DATA_END_DATE &&
+    days >= 1 &&
+    days <= 7;
   const queryKey = `${region.id}|${startDate}|${actualEndDate}`;
   const currentQuery = queryResult?.key === queryKey ? queryResult : null;
   const observations = currentQuery?.observations ?? EMPTY_OBSERVATIONS;
   const isLoading = validRange && currentQuery === null;
   const error = currentQuery?.error ?? (!validRange && days > 7
     ? 'Map view supports up to 7 days at a time. Use AI Analyzer for longer date ranges.'
-    : !validRange && (startDate < EARLIEST_DATE || actualEndDate > TODAY || days < 1)
-      ? 'Choose a valid date range from 2000-11-01 through today.'
+    : !validRange && (startDate < FIRMS_DATA_START_DATE || actualEndDate > FIRMS_DATA_END_DATE || days < 1)
+      ? `Choose a valid date range from ${FIRMS_DATA_START_DATE} through ${FIRMS_DATA_END_DATE}.`
       : null);
 
   const filteredObservations = useMemo(() => observations.filter((observation) =>
@@ -489,8 +490,8 @@ export function FireExplorer({
                   <input
                     aria-label={period === 'custom' ? 'Date from' : 'Observation date'}
                     type="date"
-                    min={period === 'custom' ? EARLIEST_DATE : (period === '7d' ? shiftDate(EARLIEST_DATE, 6) : period === '3d' ? shiftDate(EARLIEST_DATE, 2) : EARLIEST_DATE)}
-                    max={period === 'custom' ? customEnd : TODAY}
+                    min={period === 'custom' ? FIRMS_DATA_START_DATE : (period === '7d' ? shiftDate(FIRMS_DATA_START_DATE, 6) : period === '3d' ? shiftDate(FIRMS_DATA_START_DATE, 2) : FIRMS_DATA_START_DATE)}
+                    max={period === 'custom' ? customEnd : FIRMS_DATA_END_DATE}
                     value={period === 'custom' ? customStart : endDate}
                     onChange={(event) => period === 'custom' ? setCustomStart(event.target.value) : setEndDate(event.target.value)}
                     className="mt-1 block w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-500/70"
@@ -503,7 +504,7 @@ export function FireExplorer({
                       aria-label="Date to"
                       type="date"
                       min={customStart}
-                      max={TODAY}
+                      max={FIRMS_DATA_END_DATE}
                       value={customEnd}
                       onChange={(event) => setCustomEnd(event.target.value)}
                       className="mt-1 block w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-500/70"
@@ -524,7 +525,7 @@ export function FireExplorer({
                   Custom dates · up to 7 days
                 </button>
                 <p className={`text-[10px] ${validRange ? 'text-slate-500' : 'text-rose-300'}`}>
-                  {validRange ? `${startDate} — ${actualEndDate} · ${days} ${days === 1 ? 'day' : 'days'}` : 'Choose a valid range of 1–7 days through today.'}
+                  {validRange ? `${startDate} — ${actualEndDate} · ${days} ${days === 1 ? 'day' : 'days'}` : `Choose a valid range of 1–7 days through ${FIRMS_DATA_END_DATE}.`}
                 </p>
               </div>
             </FilterSection>

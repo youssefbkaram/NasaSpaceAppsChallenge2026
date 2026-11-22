@@ -1,6 +1,11 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import type { HotspotObservation, RegionPreset, SensorType } from '../../types/fire';
+import {
+  FIRMS_DATA_END_DATE,
+  FIRMS_DATA_START_DATE,
+  MAX_FIRMS_QUERY_DAYS
+} from '../../data/firmsDataAvailability';
 import { FIRMSDateController } from './FIRMSDateController';
 import { fetchNASAObservations, FIRMS_DATA_MODE } from '../../services/firmsDataService';
 
@@ -12,10 +17,6 @@ interface FIRMSMapProps {
   onDateChange: (newDate: string) => void;
   onObservationsChange: (observations: HotspotObservation[]) => void;
 }
-
-const MAX_RANGE_DAYS = 90;
-const MIN_DATE = '2000-11-01';
-const LATEST_AVAILABLE_DATE = new Date().toISOString().slice(0, 10);
 
 function shiftDate(date: string, offset: number): string {
   const shifted = new Date(`${date}T00:00:00Z`);
@@ -121,9 +122,9 @@ export const FIRMSMap: React.FC<FIRMSMapProps> = ({
     ? customStartDate
     : shiftDate(endDate, 1 - requestedDayCount);
   const isRangeValid = requestedDayCount >= 1 &&
-    requestedDayCount <= MAX_RANGE_DAYS &&
-    startDate >= MIN_DATE &&
-    endDate <= LATEST_AVAILABLE_DATE;
+    requestedDayCount <= MAX_FIRMS_QUERY_DAYS &&
+    startDate >= FIRMS_DATA_START_DATE &&
+    endDate <= FIRMS_DATA_END_DATE;
 
   // Use tile providers that do not require a separate map API key.
   const getTileLayer = (type: string, date: string) => {
@@ -163,7 +164,7 @@ export const FIRMSMap: React.FC<FIRMSMapProps> = ({
 
     if (!isRangeValid) {
       setIsLoadingFeed(false);
-      setFeedError(`Choose a valid date range of 1–${MAX_RANGE_DAYS} days from ${MIN_DATE} through today.`);
+      setFeedError(`Choose a valid date range of 1–${MAX_FIRMS_QUERY_DAYS} days from ${FIRMS_DATA_START_DATE} through ${FIRMS_DATA_END_DATE}.`);
       return () => controller.abort();
     }
 
@@ -346,13 +347,11 @@ export const FIRMSMap: React.FC<FIRMSMapProps> = ({
     if (!isPlaying) return;
 
     const interval = setInterval(() => {
-      const d = new Date(`${currentDate}T00:00:00Z`);
-      d.setUTCDate(d.getUTCDate() + 1);
-      if (d > new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`)) {
+      const nextDate = shiftDate(currentDate, 1);
+      if (nextDate > FIRMS_DATA_END_DATE) {
         setIsPlaying(false);
         return;
       }
-      const nextDate = d.toISOString().slice(0, 10);
       onDateChange(nextDate);
     }, 1600);
 

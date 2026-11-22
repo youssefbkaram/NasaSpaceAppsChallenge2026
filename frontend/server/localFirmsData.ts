@@ -6,6 +6,10 @@ import { createInterface } from 'node:readline';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Connect, Plugin } from 'vite';
 import type { HotspotObservation } from '../src/types/fire.js';
+import {
+  FIRMS_DATA_END_DATE,
+  FIRMS_DATA_START_DATE
+} from '../src/data/firmsDataAvailability.js';
 import { LOCAL_COUNTRY_DATASETS } from '../src/data/localCountryData.js';
 
 const DATA_ROOT = path.resolve(process.cwd(), '..', 'data');
@@ -471,6 +475,13 @@ async function handleLocalFirmsRequest(request: IncomingMessage, response: Serve
 
   const endDate = new Date(Date.parse(`${startDate}T00:00:00Z`) + (days - 1) * 86_400_000)
     .toISOString().slice(0, 10);
+  if (startDate < FIRMS_DATA_START_DATE || endDate > FIRMS_DATA_END_DATE) {
+    response.statusCode = 400;
+    response.end(JSON.stringify({
+      error: `Local FIRMS data is available from ${FIRMS_DATA_START_DATE} through ${FIRMS_DATA_END_DATE}.`
+    }));
+    return;
+  }
 
   try {
     const countries = region === 'all'

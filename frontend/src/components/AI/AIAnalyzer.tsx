@@ -2,6 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AlertCircle, BrainCircuit, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
 import type { RegionPreset } from '../../types/fire';
 import {
+  FIRMS_DATA_END_DATE,
+  FIRMS_DATA_START_DATE,
+  MAX_FIRMS_QUERY_DAYS
+} from '../../data/firmsDataAvailability';
+import {
   COSMO_ANALYSIS_ENABLED,
   requestCosmoAnalysis,
   summarizeFireData,
@@ -15,10 +20,6 @@ interface AIAnalyzerProps {
   defaultDate: string;
 }
 
-const TODAY = new Date().toISOString().slice(0, 10);
-const EARLIEST_DATE = '2000-11-01';
-const MAX_RANGE_DAYS = 90;
-
 function shiftDate(dateValue: string, offset: number): string {
   const date = new Date(`${dateValue}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + offset);
@@ -30,7 +31,7 @@ function inclusiveDayCount(startDate: string, endDate: string): number {
 }
 
 function earliestQuickEndDate(dayCount: number): string {
-  return shiftDate(EARLIEST_DATE, dayCount - 1);
+  return shiftDate(FIRMS_DATA_START_DATE, dayCount - 1);
 }
 
 function MetricCard({ label, value, detail }: { label: string; value: string; detail: string }) {
@@ -151,10 +152,10 @@ export function AIAnalyzer({ selectedRegion, defaultDate }: AIAnalyzerProps) {
   const startDate = period === 'custom' ? customStartDate : shiftDate(quickEndDate, 1 - quickDayCount);
   const endDate = period === 'custom' ? customEndDate : quickEndDate;
   const dayCount = inclusiveDayCount(startDate, endDate);
-  const validDateRange = startDate >= EARLIEST_DATE &&
-    endDate <= TODAY &&
+  const validDateRange = startDate >= FIRMS_DATA_START_DATE &&
+    endDate <= FIRMS_DATA_END_DATE &&
     dayCount >= 1 &&
-    dayCount <= MAX_RANGE_DAYS;
+    dayCount <= MAX_FIRMS_QUERY_DAYS;
 
   useEffect(() => () => requestController.current?.abort(), []);
 
@@ -171,7 +172,7 @@ export function AIAnalyzer({ selectedRegion, defaultDate }: AIAnalyzerProps) {
   const runAnalysis = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!validDateRange) {
-      setError(`Choose a valid date range of 1–${MAX_RANGE_DAYS} days, from ${EARLIEST_DATE} through today.`);
+      setError(`Choose a valid date range of 1–${MAX_FIRMS_QUERY_DAYS} days, from ${FIRMS_DATA_START_DATE} through ${FIRMS_DATA_END_DATE}.`);
       return;
     }
     requestController.current?.abort();
@@ -268,7 +269,7 @@ export function AIAnalyzer({ selectedRegion, defaultDate }: AIAnalyzerProps) {
                 <input
                   type="date"
                   required
-                  min={EARLIEST_DATE}
+                  min={FIRMS_DATA_START_DATE}
                   max={customEndDate}
                   value={customStartDate}
                   onChange={(event) => setCustomStartDate(event.target.value)}
@@ -281,7 +282,7 @@ export function AIAnalyzer({ selectedRegion, defaultDate }: AIAnalyzerProps) {
                   type="date"
                   required
                   min={customStartDate}
-                  max={TODAY}
+                  max={FIRMS_DATA_END_DATE}
                   value={customEndDate}
                   onChange={(event) => setCustomEndDate(event.target.value)}
                   className="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"
@@ -290,7 +291,7 @@ export function AIAnalyzer({ selectedRegion, defaultDate }: AIAnalyzerProps) {
               <p className={`text-xs sm:col-span-2 ${validDateRange ? 'text-slate-500' : 'text-amber-300'}`}>
                 {validDateRange
                   ? `${dayCount} ${dayCount === 1 ? 'day' : 'days'} selected`
-                  : `Choose a range of 1–${MAX_RANGE_DAYS} days, ending no later than today.`}
+                  : `Choose a range of 1–${MAX_FIRMS_QUERY_DAYS} days, ending no later than ${FIRMS_DATA_END_DATE}.`}
               </p>
             </div>
           ) : (
@@ -300,7 +301,7 @@ export function AIAnalyzer({ selectedRegion, defaultDate }: AIAnalyzerProps) {
                 type="date"
                 required
                 min={earliestQuickEndDate(quickDayCount)}
-                max={TODAY}
+                max={FIRMS_DATA_END_DATE}
                 value={quickEndDate}
                 onChange={(event) => setQuickEndDate(event.target.value)}
                 className="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"

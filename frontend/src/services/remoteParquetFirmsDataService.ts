@@ -1,5 +1,10 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
 import { HotspotObservation, RegionPreset } from '../types/fire';
+import {
+  FIRMS_DATA_END_DATE,
+  FIRMS_DATA_START_DATE,
+  MAX_FIRMS_QUERY_DAYS
+} from '../data/firmsDataAvailability';
 
 interface ParquetManifestFile {
   path: string;
@@ -139,10 +144,24 @@ export async function fetchRemoteParquetObservations(
   dayCount: number,
   signal?: AbortSignal
 ): Promise<HotspotObservation[]> {
-  const baseUrl = dataBaseUrl();
-  const endDate = new Date(Date.parse(`${startDate}T00:00:00Z`) + (dayCount - 1) * 86_400_000)
+  const startTimestamp = Date.parse(`${startDate}T00:00:00Z`);
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(startDate) ||
+    !Number.isFinite(startTimestamp) ||
+    new Date(startTimestamp).toISOString().slice(0, 10) !== startDate ||
+    !Number.isInteger(dayCount) ||
+    dayCount < 1 ||
+    dayCount > MAX_FIRMS_QUERY_DAYS
+  ) {
+    throw new Error(`Choose a valid FIRMS date range of 1–${MAX_FIRMS_QUERY_DAYS} days.`);
+  }
+  const endDate = new Date(startTimestamp + (dayCount - 1) * 86_400_000)
     .toISOString()
     .slice(0, 10);
+  if (startDate < FIRMS_DATA_START_DATE || endDate > FIRMS_DATA_END_DATE) {
+    throw new Error(`FIRMS Parquet data is available from ${FIRMS_DATA_START_DATE} through ${FIRMS_DATA_END_DATE}.`);
+  }
+  const baseUrl = dataBaseUrl();
   const manifest = await loadManifest(baseUrl, signal);
   if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
 

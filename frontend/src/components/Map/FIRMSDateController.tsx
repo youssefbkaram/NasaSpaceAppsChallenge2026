@@ -1,9 +1,10 @@
 import React from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight, Pause, Play, Split } from 'lucide-react';
-
-const MIN_DATE = '2000-11-01';
-const MAX_RANGE_DAYS = 90;
-const LATEST_AVAILABLE_DATE = new Date().toISOString().slice(0, 10);
+import {
+  FIRMS_DATA_END_DATE,
+  FIRMS_DATA_START_DATE,
+  MAX_FIRMS_QUERY_DAYS
+} from '../../data/firmsDataAvailability';
 
 type TimeSpan = '24h' | '3d' | '7d' | 'custom';
 
@@ -51,9 +52,9 @@ export const FIRMSDateController: React.FC<FIRMSDateControllerProps> = ({
 }) => {
   const customDays = inclusiveDays(customStartDate, customEndDate);
   const validCustomRange = customDays > 0 &&
-    customDays <= MAX_RANGE_DAYS &&
-    customStartDate >= MIN_DATE &&
-    customEndDate <= LATEST_AVAILABLE_DATE;
+    customDays <= MAX_FIRMS_QUERY_DAYS &&
+    customStartDate >= FIRMS_DATA_START_DATE &&
+    customEndDate <= FIRMS_DATA_END_DATE;
 
   const changeEndDate = (date: string) => {
     if (!date) return;
@@ -63,7 +64,7 @@ export const FIRMSDateController: React.FC<FIRMSDateControllerProps> = ({
 
   const stepDay = (offset: number) => {
     const nextDate = addDays(currentDate, offset);
-    if (nextDate < MIN_DATE || nextDate > LATEST_AVAILABLE_DATE) return;
+    if (nextDate < FIRMS_DATA_START_DATE || nextDate > FIRMS_DATA_END_DATE) return;
     changeEndDate(nextDate);
   };
 
@@ -98,8 +99,8 @@ export const FIRMSDateController: React.FC<FIRMSDateControllerProps> = ({
               <input
                 type="date"
                 aria-label="Custom date from"
-                min={MIN_DATE}
-                max={customEndDate || LATEST_AVAILABLE_DATE}
+                min={FIRMS_DATA_START_DATE}
+                max={customEndDate || FIRMS_DATA_END_DATE}
                 value={customStartDate}
                 onChange={(event) => onCustomRangeChange(event.target.value, customEndDate)}
                 className="mt-1 block w-full min-w-0 rounded-lg border border-slate-800 bg-slate-900 px-2 py-2 text-xs text-white"
@@ -110,8 +111,8 @@ export const FIRMSDateController: React.FC<FIRMSDateControllerProps> = ({
               <input
                 type="date"
                 aria-label="Custom date to"
-                min={customStartDate || MIN_DATE}
-                max={LATEST_AVAILABLE_DATE}
+                min={customStartDate || FIRMS_DATA_START_DATE}
+                max={FIRMS_DATA_END_DATE}
                 value={customEndDate}
                 onChange={(event) => {
                   if (event.target.value) onDateChange(event.target.value);
@@ -123,7 +124,7 @@ export const FIRMSDateController: React.FC<FIRMSDateControllerProps> = ({
             <p className={`col-span-2 text-[10px] ${validCustomRange ? 'text-slate-500' : 'text-rose-300'}`}>
               {validCustomRange
                 ? `${customStartDate} — ${customEndDate} · ${customDays} ${customDays === 1 ? 'day' : 'days'}`
-                : `Choose a valid inclusive range of 1–${MAX_RANGE_DAYS} days through today.`}
+                : `Choose a valid inclusive range of 1–${MAX_FIRMS_QUERY_DAYS} days through ${FIRMS_DATA_END_DATE}.`}
             </p>
           </div>
         )}
@@ -144,8 +145,8 @@ export const FIRMSDateController: React.FC<FIRMSDateControllerProps> = ({
               <input
                 type="date"
                 aria-label="Observation end date"
-                min={MIN_DATE}
-                max={LATEST_AVAILABLE_DATE}
+                min={FIRMS_DATA_START_DATE}
+                max={FIRMS_DATA_END_DATE}
                 value={currentDate}
                 onChange={(event) => changeEndDate(event.target.value)}
                 className="block w-full min-w-0 rounded-lg border border-slate-800 bg-slate-900 py-2 pl-8 pr-2 text-xs font-mono text-slate-200"

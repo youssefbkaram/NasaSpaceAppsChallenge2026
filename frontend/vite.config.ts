@@ -1,6 +1,10 @@
 import { defineConfig, loadEnv, type Connect, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import {
+  FIRMS_DATA_END_DATE,
+  FIRMS_DATA_START_DATE
+} from './src/data/firmsDataAvailability.js';
 import { localFirmsDataPlugin } from './server/localFirmsData.js';
 import { cosmoAiProxy } from './server/cosmoAiProxy.js';
 
@@ -58,6 +62,17 @@ function firmsAreaProxy(mapKey: string): Plugin {
         ) {
           response.statusCode = 400;
           response.end(JSON.stringify({ error: 'Invalid NASA FIRMS source, date, day range, or bounding box.' }));
+          return;
+        }
+
+        const endDate = new Date(Date.parse(`${date}T00:00:00Z`) + (days - 1) * 86_400_000)
+          .toISOString()
+          .slice(0, 10);
+        if (date < FIRMS_DATA_START_DATE || endDate > FIRMS_DATA_END_DATE) {
+          response.statusCode = 400;
+          response.end(JSON.stringify({
+            error: `NASA FIRMS data is available from ${FIRMS_DATA_START_DATE} through ${FIRMS_DATA_END_DATE}.`
+          }));
           return;
         }
 

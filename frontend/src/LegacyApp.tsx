@@ -10,6 +10,7 @@ import { Footer } from './components/Footer';
 import { AIAnalyzer } from './components/AI/AIAnalyzer';
 
 import type { HotspotObservation, RegionPreset, SensorType } from './types/fire';
+import { FIRMS_DATA_END_DATE } from './data/firmsDataAvailability';
 import { REGION_PRESETS } from './data/regionPresets';
 import { LOCAL_COUNTRY_DATASETS } from './data/localCountryData';
 import {
@@ -19,7 +20,7 @@ import {
 import { Loader2, Sparkles, AlertCircle } from 'lucide-react';
 
 function getInitialObservationDate(): string {
-  return '2026-11-13';
+  return FIRMS_DATA_END_DATE;
 }
 
 export function App() {

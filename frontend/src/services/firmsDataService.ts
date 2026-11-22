@@ -1,4 +1,9 @@
 import { HotspotObservation, RegionPreset } from '../types/fire';
+import {
+  FIRMS_DATA_END_DATE,
+  FIRMS_DATA_START_DATE,
+  MAX_FIRMS_QUERY_DAYS
+} from '../data/firmsDataAvailability';
 import { createSyntheticFIRMSObservations } from './syntheticFirmsDataService';
 import { fetchRemoteParquetObservations } from './remoteParquetFirmsDataService';
 
@@ -25,7 +30,6 @@ type FirmsSource =
   | 'VIIRS_NOAA21_SP';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const MAX_QUERY_DAYS = 90;
 const STANDARD_PROCESSING_LAG_DAYS = 150;
 const responseCache = new Map<string, HotspotObservation[]>();
 const LAUNCH_DATES: Partial<Record<FirmsSource, string>> = {
@@ -236,14 +240,14 @@ export async function fetchNASAObservations(
   ) {
     throw new Error('Choose a valid observation date.');
   }
-  if (startDate < '2000-11-01' || startDate > formatUTCDate(new Date())) {
-    throw new Error('NASA FIRMS MODIS observations are available from 2000-11-01 through today.');
+  if (startDate < FIRMS_DATA_START_DATE || startDate > FIRMS_DATA_END_DATE) {
+    throw new Error(`NASA FIRMS observations are available from ${FIRMS_DATA_START_DATE} through ${FIRMS_DATA_END_DATE}.`);
   }
-  if (!Number.isInteger(dayCount) || dayCount < 1 || dayCount > MAX_QUERY_DAYS) {
-    throw new Error(`The requested date range must be between 1 and ${MAX_QUERY_DAYS} days.`);
+  if (!Number.isInteger(dayCount) || dayCount < 1 || dayCount > MAX_FIRMS_QUERY_DAYS) {
+    throw new Error(`The requested date range must be between 1 and ${MAX_FIRMS_QUERY_DAYS} days.`);
   }
-  if (addDays(startDate, dayCount - 1) > formatUTCDate(new Date())) {
-    throw new Error('The requested date range cannot extend beyond today.');
+  if (addDays(startDate, dayCount - 1) > FIRMS_DATA_END_DATE) {
+    throw new Error(`The requested date range cannot extend beyond ${FIRMS_DATA_END_DATE}.`);
   }
   if (FIRMS_DATA_MODE === 'local') {
     if (firmsParquetBaseUrl) {
@@ -277,14 +281,14 @@ export async function fetchNASAObservations(
   }
 
   const results: HotspotObservation[][] = [];
-  const today = formatUTCDate(new Date());
+  const latestAvailableDate = FIRMS_DATA_END_DATE;
   for (let offset = 0; offset < dayCount;) {
     const requestDate = addDays(startDate, offset);
-    if (requestDate > today) break;
+    if (requestDate > latestAvailableDate) break;
 
     const requestSources = sourcesForDate(requestDate);
     const remainingAvailableDays = Math.floor(
-      (Date.parse(`${today}T00:00:00Z`) - Date.parse(`${requestDate}T00:00:00Z`)) / DAY_MS
+      (Date.parse(`${latestAvailableDate}T00:00:00Z`) - Date.parse(`${requestDate}T00:00:00Z`)) / DAY_MS
     ) + 1;
     let requestDays = Math.min(5, dayCount - offset, remainingAvailableDays);
     while (
