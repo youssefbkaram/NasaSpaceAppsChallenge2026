@@ -1,6 +1,6 @@
 import type { Connect, Plugin } from 'vite';
+import { CosmoApiError, requestCosmoAnswer } from './cosmoApiClient.js';
 
-const COSMO_API_URL = 'https://collabs.corexai.online/apis/cosmo/v1/chat/completions';
 const MAX_REQUEST_BYTES = 24_000;
 const MAX_MESSAGE_LENGTH = 20_000;
 
@@ -61,53 +61,17 @@ function cosmoAiProxy(apiKey: string): Plugin {
 
         void (async () => {
           try {
-            const upstream = await fetch(COSMO_API_URL, {
-              method: 'POST',
-              headers: {
-                'content-type': 'application/json',
-                authorization: `Bearer ${apiKey}`
-              },
-              body: JSON.stringify({ model: 'cosmo', message }),
-              signal: AbortSignal.timeout(60_000)
-            });
-            const upstreamBody = await upstream.text();
-            let data: unknown;
-            try {
-              data = JSON.parse(upstreamBody);
-            } catch {
-              data = null;
-            }
-
-            if (!upstream.ok) {
-              console.error(`COSMO analysis request failed with status ${upstream.status}.`);
-              response.statusCode = upstream.status === 429 ? 429 : 502;
-              response.end(JSON.stringify({ error: 'COSMO could not complete the analysis. Please try again later.' }));
-              return;
-            }
-
-            const answer = data && typeof data === 'object'
-              ? (data as {
-                answer?: unknown;
-                choices?: Array<{ message?: { content?: unknown } }>;
-              }).answer ??
-                (data as {
-                  choices?: Array<{ message?: { content?: unknown } }>;
-                }).choices?.[0]?.message?.content
-              : undefined;
-
-            if (typeof answer !== 'string' || !answer.trim()) {
-              console.error('COSMO analysis response did not contain a text answer.');
-              response.statusCode = 502;
-              response.end(JSON.stringify({ error: 'COSMO returned an empty or unsupported analysis response.' }));
-              return;
-            }
-
+            const answer = await requestCosmoAnswer(apiKey, message);
             response.statusCode = 200;
             response.end(JSON.stringify({ answer }));
           } catch (error) {
             console.error('COSMO analysis request failed:', error instanceof Error ? error.message : 'Unknown error');
-            response.statusCode = 502;
-            response.end(JSON.stringify({ error: 'Could not reach COSMO. Check the connection and try again.' }));
+            response.statusCode = error instanceof CosmoApiError && error.statusCode === 429 ? 429 : 502;
+            response.end(JSON.stringify({
+              error: error instanceof CosmoApiError
+                ? error.message
+                : 'Could not reach COSMO. Check the connection and try again.'
+            }));
           }
         })();
       });

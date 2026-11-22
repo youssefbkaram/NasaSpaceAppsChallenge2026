@@ -48,7 +48,8 @@ const backendApiBaseUrl =
     ?.trim()
     .replace(/\/$/, '') ?? '';
 const hasRemoteParquetDataset = Boolean(import.meta.env.VITE_FIRMS_PARQUET_BASE_URL?.trim());
-export const COSMO_ANALYSIS_ENABLED = Boolean(backendApiBaseUrl) || !hasRemoteParquetDataset;
+const hasCosmoServerlessApi = import.meta.env.VITE_COSMO_ENABLED === 'true';
+export const COSMO_ANALYSIS_ENABLED = Boolean(backendApiBaseUrl) || hasCosmoServerlessApi || !hasRemoteParquetDataset;
 
 function median(values: number[]): number | null {
   if (values.length === 0) return null;

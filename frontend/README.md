@@ -51,14 +51,25 @@ The calendar, statistical analytics, and any unconnected forecasting/anomaly exa
 The AI Analyzer uses the selected region and quick 1-, 3-, or 7-day UTC
 periods, or a custom inclusive start/end date range of up to 90 days, to
 retrieve FIRMS detections. It computes the displayed counts and FRP statistics
-locally, then sends COSMO the aggregates, up to 20 highest-FRP example points,
-and an optional question (up to 500 characters). It does not upload the full
-observation dataset. COSMO returns structured JSON that the browser validates
-and renders as an interpretation dashboard. AI text is not a validated
-scientific conclusion; raw MODIS and VIIRS detections are not directly
-comparable and are never combined into a harmonized count here.
+locally. A COSMO interpretation sends aggregate metrics, up to 20
+highest-FRP example points, and the optional question (up to 500 characters),
+not the full observation dataset. Raw MODIS and VIIRS detections are not
+directly comparable and are never combined into a harmonized count here.
 
-Set `COSMO_API_KEY` (without a `VITE_` prefix) in `frontend/.env.local` and
-restart Vite. The local Vite proxy keeps the key out of browser code and is
-available for development/preview only. A deployed site needs an equivalent
-server-side endpoint configured with the secret key. Never commit the key.
+The static GitHub Pages deployment has no COSMO backend, so it displays the
+metrics without an AI interpretation. To enable COSMO on Vercel:
+
+1. Import the repository into Vercel and set the project root directory to
+   `frontend`.
+2. Add `COSMO_API_KEY` as a server-only environment variable. Do not prefix it
+   with `VITE_` or commit it.
+3. Set `VITE_COSMO_ENABLED=true`, `VITE_FIRMS_DATA_MODE=local`, and
+   `VITE_FIRMS_PARQUET_BASE_URL` to the public Parquet dataset base URL.
+4. Redeploy. The `/api/ai/analyze` Vercel function proxies to COSMO without
+   exposing the key to browser code.
+
+For local Vite development, set `COSMO_API_KEY` in `frontend/.env.local`; the
+local proxy keeps it out of browser code. The Vercel API endpoint is public;
+anyone can call it and consume COSMO API quota. Confirm COSMO's usage terms and
+add authentication or a durable rate limit before broadly sharing the endpoint.
+Vercel function quotas apply separately.

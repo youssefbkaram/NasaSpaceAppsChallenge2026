@@ -123,11 +123,19 @@ commitment.
 The Burning Calendar and historical analytics use the checked-in, precomputed
 monthly summaries under `frontend/public/data/harmonized/` for Suriname and
 Guyana. Other countries need their own published harmonized summary. The AI
-Analyzer computes detection metrics in the browser, but COSMO-generated
-interpretation requires a secured backend; it is disabled on this static
-deployment rather than exposing an API key. The `/api/ai/analyze` and
-`/api/harmonized/monthly` Vite endpoints remain available for local/backend
-deployments.
+Analyzer computes fire metrics in the browser. The static GitHub Pages site
+does not have a COSMO backend, so AI interpretation is disabled there.
+
+To enable COSMO on Vercel, import the repository with `frontend` as the project
+root, set `COSMO_API_KEY` as a server-only environment variable, and set
+`VITE_COSMO_ENABLED=true`, `VITE_FIRMS_DATA_MODE=local`, and
+`VITE_FIRMS_PARQUET_BASE_URL` to the public Parquet dataset base URL. The
+`/api/ai/analyze` Vercel function keeps the API key out of browser code. COSMO
+receives aggregate metrics, up to 20 highest-FRP example points, and the
+optional question—not the full observation file. Never commit the API key.
+The Vercel function is publicly callable, so confirm COSMO's usage terms and
+limits before broadly sharing it. The local `/api/ai/analyze` Vite proxy and
+`/api/harmonized/monthly` endpoint remain available for development.
 
 ## Run the pipeline
 
