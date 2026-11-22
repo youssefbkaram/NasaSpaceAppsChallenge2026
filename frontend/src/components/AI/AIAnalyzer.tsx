@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AlertCircle, BrainCircuit, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
 import type { RegionPreset } from '../../types/fire';
 import {
+  COSMO_ANALYSIS_ENABLED,
   requestCosmoAnalysis,
   summarizeFireData,
   type CosmoAnalysis,
@@ -42,16 +43,31 @@ function MetricCard({ label, value, detail }: { label: string; value: string; de
   );
 }
 
-function AnalysisDashboard({ analysis, data }: { analysis: CosmoAnalysis; data: FireDataSummary }) {
+function AnalysisDashboard({
+  analysis,
+  data,
+  aiUnavailableMessage
+}: {
+  analysis?: CosmoAnalysis;
+  data: FireDataSummary;
+  aiUnavailableMessage?: string;
+}) {
   return (
     <section className="space-y-4" aria-live="polite">
       <div className="rounded-2xl border border-cyan-900/70 bg-gradient-to-br from-slate-950 to-cyan-950/30 p-5">
         <div className="flex items-center gap-2 text-cyan-300">
           <CheckCircle2 className="h-4 w-4" />
-          <span className="text-xs font-medium">AI interpretation of supplied fire detections</span>
+          <span className="text-xs font-medium">
+            {analysis ? 'AI interpretation of supplied fire detections' : 'Fire-data summary calculated in your browser'}
+          </span>
         </div>
-        <h2 className="mt-3 text-xl font-semibold text-white">{analysis.headline}</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-300">{analysis.summary}</p>
+        <h2 className="mt-3 text-xl font-semibold text-white">
+          {analysis?.headline ?? 'Observation summary'}
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-300">
+          {analysis?.summary ??
+            'The metrics below summarize the selected NASA FIRMS point detections. They are not a count of unique fires.'}
+        </p>
         <p className="mt-3 text-[11px] text-slate-500">
           {data.region} · {data.startDate} to {data.endDate} · {data.observationCount.toLocaleString()} point detections
         </p>
@@ -60,6 +76,13 @@ function AnalysisDashboard({ analysis, data }: { analysis: CosmoAnalysis; data: 
           {' · '}Quality: {Object.entries(data.byQuality).map(([quality, count]) => `${quality} ${count.toLocaleString()}`).join(' · ')}
         </p>
       </div>
+
+      {aiUnavailableMessage && (
+        <div role="status" className="rounded-xl border border-amber-800/60 bg-amber-950/20 p-4 text-xs leading-5 text-amber-100">
+          <strong className="block font-semibold text-amber-300">AI interpretation unavailable</strong>
+          <span>{aiUnavailableMessage}</span>
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard label="Point detections" value={data.observationCount.toLocaleString()} detail="Not a count of unique fires" />
@@ -72,7 +95,7 @@ function AnalysisDashboard({ analysis, data }: { analysis: CosmoAnalysis; data: 
         />
       </div>
 
-      {analysis.findings.length > 0 && (
+      {analysis && analysis.findings.length > 0 && (
         <div className="grid gap-3 md:grid-cols-2">
           {analysis.findings.map((finding, index) => (
             <article key={`${finding.title}-${index}`} className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
@@ -88,22 +111,24 @@ function AnalysisDashboard({ analysis, data }: { analysis: CosmoAnalysis; data: 
         </div>
       )}
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <div className="rounded-xl border border-amber-900/50 bg-amber-950/20 p-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-amber-300">Limitations</h3>
-          <ul className="mt-2 space-y-2 text-xs leading-5 text-slate-300">
-            {analysis.limitations.map((limitation, index) => <li key={`${limitation}-${index}`}>• {limitation}</li>)}
-          </ul>
-        </div>
-        {analysis.recommendations.length > 0 && (
-          <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Suggested next steps</h3>
+      {analysis && (
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-xl border border-amber-900/50 bg-amber-950/20 p-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-amber-300">Limitations</h3>
             <ul className="mt-2 space-y-2 text-xs leading-5 text-slate-300">
-              {analysis.recommendations.map((recommendation, index) => <li key={`${recommendation}-${index}`}>• {recommendation}</li>)}
+              {analysis.limitations.map((limitation, index) => <li key={`${limitation}-${index}`}>• {limitation}</li>)}
             </ul>
           </div>
-        )}
-      </div>
+          {analysis.recommendations.length > 0 && (
+            <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Suggested next steps</h3>
+              <ul className="mt-2 space-y-2 text-xs leading-5 text-slate-300">
+                {analysis.recommendations.map((recommendation, index) => <li key={`${recommendation}-${index}`}>• {recommendation}</li>)}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -116,7 +141,11 @@ export function AIAnalyzer({ selectedRegion, defaultDate }: AIAnalyzerProps) {
   const [userQuestion, setUserQuestion] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ analysis: CosmoAnalysis; data: FireDataSummary } | null>(null);
+  const [result, setResult] = useState<{
+    analysis?: CosmoAnalysis;
+    data: FireDataSummary;
+    aiUnavailableMessage?: string;
+  } | null>(null);
   const requestController = useRef<AbortController | null>(null);
   const quickDayCount = period === 'custom' ? 1 : Number(period);
   const startDate = period === 'custom' ? customStartDate : shiftDate(quickEndDate, 1 - quickDayCount);
@@ -158,8 +187,29 @@ export function AIAnalyzer({ selectedRegion, defaultDate }: AIAnalyzerProps) {
         throw new Error('No observations were returned for this region and period. Try another date range.');
       }
       const data = summarizeFireData(selectedRegion, observations, startDate, dayCount);
-      const analysis = await requestCosmoAnalysis(data, userQuestion, controller.signal);
-      if (!controller.signal.aborted) setResult({ analysis, data });
+      if (!COSMO_ANALYSIS_ENABLED) {
+        if (!controller.signal.aborted) {
+          setResult({
+            data,
+            aiUnavailableMessage: 'This static deployment does not send data to an AI service. A server-side COSMO backend is required for AI interpretation.'
+          });
+        }
+        return;
+      }
+
+      try {
+        const analysis = await requestCosmoAnalysis(data, userQuestion, controller.signal);
+        if (!controller.signal.aborted) setResult({ analysis, data });
+      } catch (caught) {
+        if (!controller.signal.aborted) {
+          setResult({
+            data,
+            aiUnavailableMessage: caught instanceof Error
+              ? `Your data summary is ready, but COSMO could not interpret it: ${caught.message}`
+              : 'Your data summary is ready, but COSMO could not complete the interpretation.'
+          });
+        }
+      }
     } catch (caught) {
       if (!controller.signal.aborted) {
         setError(caught instanceof Error ? caught.message : 'The analysis could not be completed.');
@@ -179,7 +229,7 @@ export function AIAnalyzer({ selectedRegion, defaultDate }: AIAnalyzerProps) {
           <div>
             <h1 className="text-lg font-semibold text-white">Fire Data AI Analyzer</h1>
             <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">
-              Select a region in the header, then choose a quick period or a custom date range (up to 90 days). The dashboard metrics are calculated from the retrieved data; COSMO provides a structured interpretation.
+              Select a region in the header, then choose a quick period or a custom date range (up to 90 days). Dashboard metrics are calculated from the retrieved data; a configured server-side COSMO backend can provide an additional interpretation.
             </p>
           </div>
         </div>
@@ -276,7 +326,9 @@ export function AIAnalyzer({ selectedRegion, defaultDate }: AIAnalyzerProps) {
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="max-w-2xl text-[11px] leading-4 text-slate-500">
-              COSMO receives aggregate metrics, up to 20 highest-FRP example points, and your optional question—not the full observation file. Its AI-generated interpretation may be imperfect.
+              {COSMO_ANALYSIS_ENABLED
+                ? 'COSMO receives aggregate metrics, up to 20 highest-FRP example points, and your optional question—not the full observation file. Its AI-generated interpretation may be imperfect.'
+                : 'Metrics are calculated locally in your browser. AI interpretation is disabled here; no API key or observation data is sent to an AI service.'}
             </p>
             <button
               type="submit"
@@ -284,7 +336,7 @@ export function AIAnalyzer({ selectedRegion, defaultDate }: AIAnalyzerProps) {
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-cyan-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {isLoading ? 'Analyzing…' : 'Analyze fire data'}
+              {isLoading ? 'Analyzing…' : COSMO_ANALYSIS_ENABLED ? 'Analyze fire data' : 'Summarize fire data'}
             </button>
           </div>
         </form>
@@ -297,7 +349,13 @@ export function AIAnalyzer({ selectedRegion, defaultDate }: AIAnalyzerProps) {
         )}
       </section>
 
-      {result && <AnalysisDashboard analysis={result.analysis} data={result.data} />}
+      {result && (
+        <AnalysisDashboard
+          analysis={result.analysis}
+          data={result.data}
+          aiUnavailableMessage={result.aiUnavailableMessage}
+        />
+      )}
     </div>
   );
 }

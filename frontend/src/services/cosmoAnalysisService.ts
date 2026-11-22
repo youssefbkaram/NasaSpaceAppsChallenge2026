@@ -43,6 +43,13 @@ export interface FireDataSummary {
   }>;
 }
 
+const backendApiBaseUrl =
+  (import.meta.env.VITE_BACKEND_API_URL || import.meta.env.VITE_LOCAL_FIRMS_API_URL)
+    ?.trim()
+    .replace(/\/$/, '') ?? '';
+const hasRemoteParquetDataset = Boolean(import.meta.env.VITE_FIRMS_PARQUET_BASE_URL?.trim());
+export const COSMO_ANALYSIS_ENABLED = Boolean(backendApiBaseUrl) || !hasRemoteParquetDataset;
+
 function median(values: number[]): number | null {
   if (values.length === 0) return null;
   values.sort((a, b) => a - b);
@@ -186,19 +193,24 @@ export async function requestCosmoAnalysis(
   userQuestion: string,
   signal?: AbortSignal
 ): Promise<CosmoAnalysis> {
+  if (!COSMO_ANALYSIS_ENABLED) {
+    throw new Error('AI interpretation requires a server-side COSMO backend; this static site only calculates local data summaries.');
+  }
   const message = buildCosmoMessage(summary, userQuestion);
-  const backendApiBaseUrl =
-    (import.meta.env.VITE_BACKEND_API_URL || import.meta.env.VITE_LOCAL_FIRMS_API_URL)
-      ?.trim()
-      .replace(/\/$/, '') ?? '';
   const response = await fetch(`${backendApiBaseUrl}/api/ai/analyze`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ message }),
     signal
   });
-  const body: unknown = await response.json().catch(() => null);
+  const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
+  const body: unknown = contentType.includes('application/json')
+    ? await response.json().catch(() => null)
+    : null;
   if (!response.ok) {
+    if (response.status === 404 || response.status === 405 || contentType.includes('text/html')) {
+      throw new Error('The COSMO analysis endpoint is unavailable. A server-side backend is required; the data summary can still be shown.');
+    }
     const error = body && typeof body === 'object' && typeof (body as { error?: unknown }).error === 'string'
       ? (body as { error: string }).error
       : `COSMO request failed (${response.status}).`;

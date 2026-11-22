@@ -115,11 +115,19 @@ country/year Parquet partitions; Parquet range reads avoid downloading whole
 partitions. The uploaded manifest and an actual Parquet file were verified;
 Hugging Face returned HTTP 206 for a byte-range request with CORS enabled, and
 a browser query against an uploaded Egypt partition returned observations.
-GitHub Pages itself has not yet been deployed. Hugging Face public storage is
-best-effort, not a guaranteed free capacity or uptime commitment. The existing
-`/api/ai/analyze` and `/api/harmonized/monthly` Vite proxies are not available
-on GitHub Pages; those AI and monthly analytics paths still require a backend
-and are intentionally not exposed with browser-side secrets.
+The static site is deployed at
+https://youssefbkaram.github.io/NasaSpaceAppsChallenge2026/. Hugging Face
+public storage is best-effort, not a guaranteed free capacity or uptime
+commitment.
+
+The Burning Calendar and historical analytics use the checked-in, precomputed
+monthly summaries under `frontend/public/data/harmonized/` for Suriname and
+Guyana. Other countries need their own published harmonized summary. The AI
+Analyzer computes detection metrics in the browser, but COSMO-generated
+interpretation requires a secured backend; it is disabled on this static
+deployment rather than exposing an API key. The `/api/ai/analyze` and
+`/api/harmonized/monthly` Vite endpoints remain available for local/backend
+deployments.
 
 ## Run the pipeline
 
